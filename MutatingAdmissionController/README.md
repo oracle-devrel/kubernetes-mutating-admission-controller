@@ -204,3 +204,11 @@ If you do not know for certain the index of the modification array in the deploy
 
 If there is no entry in the array with a matching key / key value then the `arrayKeyValueNoMatchAction` is looked at, if this is `error` then the entire deployment will be rejected, if it's `ignore` then this array element in the mapping will be ignored, if it's `add` then a new array entry will be added to the deployment based on the contents of the `arrayValue` key to avoid duplication if adding an item where there is a missing key : keyValue field then the code will automatically add an entry to the resulting object who's key it the contents of `arrayKey` and value is the string `arrayKeyValue`.
  
+## Disclaimer
+
+ORACLE AND ITS AFFILIATES DO NOT PROVIDE ANY WARRANTY WHATSOEVER, EXPRESS OR IMPLIED, FOR ANY SOFTWARE, MATERIAL OR CONTENT OF ANY KIND
+
+## Copyright
+
+Copyright (c) 2023 Oracle and/or its affiliates. All rights reserved.
+The Universal Permissive License (UPL), Version 1.0

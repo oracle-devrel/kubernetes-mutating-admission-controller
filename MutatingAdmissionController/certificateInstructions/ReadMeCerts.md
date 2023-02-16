@@ -106,3 +106,12 @@ The servicetls template goes into the configsecure directory
 The webhook template contains info on how the mutating admission controller framework talks to the controller we have developed
 
 `cat templates/DeploymentMAC-Webhook-template.yaml | envsubst > yaml/DeploymentMAC-Webhook.yaml`
+
+## Disclaimer
+
+ORACLE AND ITS AFFILIATES DO NOT PROVIDE ANY WARRANTY WHATSOEVER, EXPRESS OR IMPLIED, FOR ANY SOFTWARE, MATERIAL OR CONTENT OF ANY KIND
+
+## Copyright
+
+Copyright (c) 2023 Oracle and/or its affiliates. All rights reserved.
+The Universal Permissive License (UPL), Version 1.0

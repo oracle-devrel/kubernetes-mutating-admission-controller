@@ -1,7 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!--
-
-    Copyright (c) 2023 Oracle and/or its affiliates.
+/*Copyright (c) 2023 Oracle and/or its affiliates.
 
 The Universal Permissive License (UPL), Version 1.0
 
@@ -36,12 +33,31 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+ */
+package com.oracle.timg.kubernetes.mutatingadmissioncontroller.exceptions;
 
--->
-<beans xmlns="https://jakarta.ee/xml/ns/jakartaee"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
-                           https://jakarta.ee/xml/ns/jakartaee/beans_3_0.xsd"
-       version="3.0"
-       bean-discovery-mode="annotated">
-</beans>
+public class MutatingAdmissionControllerTypeMismatchException extends MutatingAdmissionControllerTypeException {
+
+	private static final long serialVersionUID = 6767364259756215700L;
+
+	public MutatingAdmissionControllerTypeMismatchException() {
+	}
+
+	public MutatingAdmissionControllerTypeMismatchException(String message) {
+		super(message);
+	}
+
+	public MutatingAdmissionControllerTypeMismatchException(Throwable cause) {
+		super(cause);
+	}
+
+	public MutatingAdmissionControllerTypeMismatchException(String message, Throwable cause) {
+		super(message, cause);
+	}
+
+	public MutatingAdmissionControllerTypeMismatchException(String message, Throwable cause, boolean enableSuppression,
+			boolean writableStackTrace) {
+		super(message, cause, enableSuppression, writableStackTrace);
+	}
+
+}
