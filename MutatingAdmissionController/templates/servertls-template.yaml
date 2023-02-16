@@ -1,0 +1,21 @@
+server:
+  tls:
+    private-key:
+      # Use the following section if using a keystore
+      keystore: 
+        # this is the path in the file system relative to the current working directory, if you want to use a class path then use resource.resource-path
+        resource.path: "configsecure/deploymentmac.p12"
+        # This tells it to use a PKCS12 keystore, If you want to use a Java keystore replace PKCS12 with JKS
+        type: "PKCS12"
+        passphrase: "${KEY_PASSWORD}"
+      # Use the following section if you have a PKCS8 formated key and certificat
+      # pem:
+      #  # this is thge path in the file system, if you want to use a class path then use resource.resource-path
+      #  key:
+      #    # this is the path in the file system relative to the current working directory, if you want to use a class path then use resource.resource-path
+      #    resource.path: "configsecure/nextflowmac.p8"
+      #    passphrase: "${KEY_PASSWORD}"
+      #  cert-chain:
+      #    # this is the path in the file system relative to the current working directory, if you want to use a class path then use resource.resource-path
+      #    resource.path: "configsecure/nextflowmac.crt"
+      

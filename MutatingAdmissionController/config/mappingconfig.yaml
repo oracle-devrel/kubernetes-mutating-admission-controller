@@ -1,0 +1,71 @@
+mutate:
+  # a comman separated list of namespces to review when accepting inputs. If the object namespace is not on this list then 
+  # nothing will be modified
+  targetNamespaces: "mactest"
+  input:
+    # name of the metadata label from the input that will contain the name of the mappings
+    labelName: "nextflowNodeSelectorConf"
+    # is a mapping required to be present ?
+    requireMapping: "false"
+    # do we error if we can't find a mapping ?
+    errorOnMissingMapping: "true"
+  # mappings to process the name is the name provided by nextflow, the value is the attributes
+  # to apply to the pods that match. This section is required for the code to run
+  # note that this sctructure reall only works on objects at this point
+  # if it comes across an array then the behaviour is uncertain, but that's OK
+  # for this use case as the current goal is to apply settings at the nodeSelector level
+  mappings:
+    cpuIntensive : 
+      spec:
+        template:
+          spec:
+            containers:
+              # is required, can be either key or index (case insensitive) 
+              # if key then you need a arrayKey, arrayKeyValue and arrayValue config entry and optionally arrayKeyMissingError and arrayKeyValueNoMatchAction
+              # if index then you need an arrayIndex with the value indicating the array oindex to use in the json and optionally arrayIndexMissingError
+              # Note that if you are adding items to the array using an index then arrayKey and arrayKeyValue are also required.
+            - arrayElementConfigType: "key"
+              arrayKey: "name"
+              # this is optional, if the key can't be found then you have the option to error and reject the request, if false then this is just ignored
+              arrayKeyMissingError: false 
+              arrayKeyValue: "nginx"
+              # this is optional, if there is no item in the JSON from Kubernetes in the list which has a key matching the keyValue then you have the 
+              # choice to ignore this config item totally (default), add a new item to the list (at the end) or error which will reject the entire request.
+              # If yuou chose to add then the code will automatically add an entry to the JSON generated from arrayValue which will have a name of the 
+              # arrayKey value and a value of the arrayKeyValue
+              # Note that if arrayKeyMissingError is false then this no match action will kick in if there are no objects that have a field with the arrayKey. This 
+              # means that if you make a mistake in the name in arrayKey then the action here is what will happen which may not be what you expect
+              arrayKeyValueNoMatchAction: "add" 
+              # indicates what array element in the incomming JSON to use as the incomming source, cannot be less than zero              
+              arrayIndex: 1
+              # what to do if the index is out of bounds of the incomming JSON array see the optins for arrayKeyValueNoMatchAction
+              # Note that unlike location array items using a key / key value if you specify add for an indexed item then you will need to include any 
+              # key / key value in the arrayValue json.
+              arrayIndexMissingError: "add"
+              # the config tree to compare against an existing json or (if add is selected and the existing isn't found) to add.
+              # note that if chosing add and a search on the key you will then the key  : keyValue will be added to this automatically, but not if using index
+              # Of course this also MUST confirm to the expected input formats as it's passed on to kubernetes, so for example specifying 256 for memory 
+              # will actuall mean 256 bytes as that's how kubernrtes interprets it, in reality for that case you'd probabaly want 256Mi meaning 25 Mega bytes
+              arrayValue:
+                resources:
+                  requests:
+                    cpu: "250m"
+                    memory: "4Gi"
+                  limits:
+                    cpu: "500m"
+                    memory: "8Gi"
+            #nodeSelector:
+            #  type: "cpu-large"
+    memoryIntensive : 
+      spec:
+        strategy:
+          type: RollingUpdate
+          rollingUpdate:
+            maxSurge: 1
+            maxUnavailable: 0 
+        template:
+          spec:
+            nodeSelector:
+              type: "memory-large"
+    
+  

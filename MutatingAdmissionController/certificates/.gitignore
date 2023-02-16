@@ -1,0 +1,8 @@
+/deploymentmac.crt
+/deploymentmac.key
+/deploymentmac.p12
+/intermediate_ca.crt
+/intermediate_ca.key
+/password
+/root_ca.crt
+/root_ca.key

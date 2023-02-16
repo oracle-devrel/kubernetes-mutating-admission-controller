@@ -1,0 +1,22 @@
+sources:
+    - type: "environment-variables"
+    - type: "system-properties"
+    - type: "file"
+      properties:
+          path: "config/mappingconfig.yaml"
+          optional: true
+          change-watcher:
+            type: "file"
+            properties:
+              initial-delay-millis: 10000
+              delay-millis: 5000
+    - type: "file"
+      properties:
+          path: "configsecure/servertls.yaml"
+          optional: true
+    - type: "classpath"
+      properties:
+          resource: "application.yaml"
+    - type: "classpath"
+      properties:
+          resource: "META-INF/microprofile-config.properties"

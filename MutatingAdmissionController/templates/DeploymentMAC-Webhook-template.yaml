@@ -1,0 +1,29 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: deploymentmac
+  labels:
+    app: deploymentmac
+webhooks:
+  - name: ${SERVICE_NAME}.${SERVICE_NAMESPACE}.svc.cluster.local
+    admissionReviewVersions: ["v1"]
+    clientConfig:
+      caBundle: ${CA_BUNDLE}
+      service:
+        name: deploymentmac
+        namespace: management
+        path: "/mutate"
+    sideEffects: "None"
+    failurePolicy: "Fail"
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups:   ["*"]
+        apiVersions: ["*"]
+        resources: ["deployments"]
+    # This means it will ONLY call the web hook when run against a namespace which has the 
+    # metadata label mutateme set to enabled
+    # whatever happens DO NOT apply this flag to the namespace you're running the mutating controller itself in or you won't be able to update or re-deploy the 
+    # mac itself if the current one has a problem.
+    namespaceSelector:
+      matchLabels:
+        mutateme: enabled
