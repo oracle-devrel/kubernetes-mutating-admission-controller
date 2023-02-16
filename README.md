@@ -2,22 +2,21 @@
 
 [![License: UPL](https://img.shields.io/badge/license-UPL-green)](https://img.shields.io/badge/license-UPL-green) [![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=oracle-devrel_kubernetes-mutating-admission-controller)](https://sonarcloud.io/dashboard?id=oracle-devrel_kubernetes-mutating-admission-controller)
 
-## THIS IS A NEW, BLANK REPO THAT IS NOT READY FOR USE YET.  PLEASE CHECK BACK SOON!
 
 ## Introduction
-MISSING
+This project was created to show how a mutating adminssion controller can be used to modify a deployment using a label in the meta data. Origionally it was just gooing to show how you coudl use the label to add a ndoeSelector to the deployment, but as I got into it I realised I coudl make this pretty general purpose.
 
 ## Getting Started
-MISSING
+As I use Eclipse and when adding an existing projectr to a git repo Eclipse adds the project as a sub folder, not the root level folder then you'll find the actuall project in the MutatingAdmissionControler folder. All of the code and the main README is there.
 
 ### Prerequisites
-MISSING
+To edit the code you'll need an editor, Java Developer Kit 17 and maven (I use Eclipse with the Maven plugin). To build the container images you'll need a docker compatible runtime.
 
 ## Notes/Issues
-MISSING
+As far as I know it seems to work pretty well, and is reasonably general putpose when it comes to adding and replacing elemenbts inthe deployment configuration. It is limited in that there is no real support for defining conditional changes though.
 
 ## URLs
-* Nothing at this time
+The [Kubernetes documentation on admission controllers is here](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/)
 
 ## Contributing
 This project is open source.  Please submit your contributions by forking this repository and submitting a pull request!  Oracle appreciates any contributions that are made by the open source community.
