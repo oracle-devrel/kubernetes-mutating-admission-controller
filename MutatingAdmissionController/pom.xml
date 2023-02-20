@@ -41,7 +41,7 @@ SOFTWARE. -->
     <parent>
         <groupId>io.helidon.applications</groupId>
         <artifactId>helidon-mp</artifactId>
-        <version>3.1.0</version>
+        <version>3.1.1</version>
         <relativePath/>
     </parent>
     <groupId>com.oracle.timg.customers.ont</groupId>
@@ -52,7 +52,7 @@ SOFTWARE. -->
 		<mainClass>io.helidon.microprofile.cdi.Main</mainClass>
 		<maven.compiler.source>17</maven.compiler.source>
 		<maven.compiler.target>${maven.compiler.source}</maven.compiler.target>
-		<version.lombok>1.18.24</version.lombok>
+		<version.lombok>1.18.26</version.lombok>
 		<version.timgutils>1.0.5</version.timgutils>
     </properties>
 
