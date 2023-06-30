@@ -44,7 +44,7 @@
                     "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"name\":\"nginx\",\"namespace\":\"nextflow\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app\":\"nginx\"}},\"template\":{\"metadata\":{\"labels\":{\"app\":\"nginx\"}},\"spec\":{\"containers\":[{\"image\":\"nginx:latest\",\"name\":\"nginx\",\"ports\":[{\"containerPort\":80}]}]}}}}\n"
                 },
                 "labels": {
-                  "nextflowNodeSelectorConf": "cpuIntensive"
+                  "mutatorMapping": "cpuIntensive"
                 },
                 "managedFields": [
                     {
@@ -155,10 +155,34 @@
                         }
                     },
                     "spec": {
+						"substitutions": {
+						  "testStringToOCIR" : "{{imageRegistry.localOCIR}}",
+						  "testNumber" : "{{testNumber}}",
+						  "testBoolean" : "{{testBoolean}}"
+						},
+						"mappings":{} ,
                         "containers": [
                             {
                                 "name": "nginx",
-                                "image": "nginx:latest",
+                                "image": "{{imageRegistry.localOCIR}}:latest",
+                                "ports": [
+                                    {
+                                        "containerPort": "{{container.ngnix.port}}",
+                                        "protocol": "TCP"
+                                    }
+                                ],
+                                "resources": {
+                                    "limits":{
+                                       "cpu": 20
+                                   }
+                                },
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File",
+                                "imagePullPolicy": "Always"
+                            } ,
+                            {
+                                "name": "nginxfull",
+                                "image": "this gets replaced with the mapping with it's substituted placeholders",
                                 "ports": [
                                     {
                                         "containerPort": 80,
@@ -168,7 +192,7 @@
                                 "resources": {
                                     "limits":{
                                        "cpu": 20
-}
+                                   }
                                 },
                                 "terminationMessagePath": "/dev/termination-log",
                                 "terminationMessagePolicy": "File",

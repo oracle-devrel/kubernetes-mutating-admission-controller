@@ -32,24 +32,25 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-# Send messages to the console
-handlers=io.helidon.common.HelidonConsoleHandler
-
-# HelidonConsoleHandler uses a SimpleFormatter subclass that replaces "!thread!" with the current thread
-java.util.logging.SimpleFormatter.format=%1$tY.%1$tm.%1$td %1$tH:%1$tM:%1$tS %4$s %3$s !thread!: %5$s%6$s%n
-
-# Global logging level. Can be overridden by specific loggers
-.level=INFO
-
-# com.oracle.timg.customers.ont.nextflowmac.MutateNextflowLabelToNodeSelector.level=FINER
-
-# Quiet Weld
-org.jboss.level=WARNING
-
-# Component specific log levels
-#io.helidon.webserver.level=INFO
-#io.helidon.config.level=INFO
-#io.helidon.security.level=INFO
-#io.helidon.common.level=INFO
-#io.netty.level=INFO
+mutationEngine:
+  # a comman separated list of namespces to review when accepting inputs. If the object namespace is not on this list then 
+  # nothing will be modified
+  targetNamespaces: "list, of possible, target namespaces, comma separated"
+  input:
+    mappings:
+      # do we run the mappings processs ?
+      doMappings: "true"
+      # name of the metadata label from the input that will contain the name of the mappings
+      labelName: "mutatorMapping"
+      # is a mapping required to be present ?
+      requireMapping: "false"
+      # do we error if we can't find a mapping ?
+      errorOnMissingMapping: "true"
+    substitutions:
+      # do we look for substitutions in the incoming JSON or the replacement settings ?
+      # defaults to false (Only applied to string values)
+      doSubstitutions: "true"
+      # indicates tha start of a substitution placeholder defaults to {{
+      substitutionStart: "<["
+      # indicates tha end of a substitution placeholder defaults to }}
+      substitutionEnd: "]>"

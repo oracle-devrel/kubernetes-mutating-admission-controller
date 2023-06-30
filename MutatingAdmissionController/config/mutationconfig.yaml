@@ -32,38 +32,26 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-sources:
-    - type: "environment-variables"
-    - type: "system-properties"
-    - type: "file"
-      properties:
-          path: "configsecure/servertls.yaml"
-          optional: false
-    - type: "file"
-      properties:
-          path: "config/mutationconfig.yaml"
-          optional: false
-    - type: "file"
-      properties:
-          path: "mappings/mappings.yaml"
-          optional: true
-          change-watcher:
-            type: "file"
-            properties:
-              initial-delay-millis: 10000
-              delay-millis: 5000
-    - type: "file"
-      properties:
-          path: "substitutions/substitutions.yaml"
-          optional: true
-          change-watcher:
-            type: "file"
-            properties:
-              initial-delay-millis: 10000
-              delay-millis: 5000
-    - type: "classpath"
-      properties:
-          resource: "application.yaml"
-    - type: "classpath"
-      properties:
-          resource: "META-INF/microprofile-config.properties"
+mutationEngine:
+  # a comman separated list of namespces to review when accepting inputs. If the object namespace is not on this list then 
+  # nothing will be modified
+  targetNamespaces: "mactest"
+  input:
+    mappings:
+      # do we run the mappings processs ?
+      doMappings: "true"
+      # name of the metadata label from the input that will contain the name of the mappings
+      labelName: "mutatorMapping"
+      # is a mapping required to be present ?
+      requireMapping: "false"
+      # do we error if we can't find a mapping ?
+      errorOnMissingMapping: "true"
+    # These control the substitutions engine
+    substitutions:
+      # do we look for substitutions in the incoming JSON or the replacement settings ?
+      # defaults to false (Only applied to string values)
+      doSubstitutions: "true"
+      # indicates tha start of a substitution placeholder defaults to {{
+      substitutionStart: "{{"
+      # indicates tha end of a substitution placeholder defaults to }}
+      substitutionEnd: "}}"

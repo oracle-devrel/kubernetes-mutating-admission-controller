@@ -1,0 +1,83 @@
+# Copyright (c) 2023 Oracle and/or its affiliates.
+# 
+# The Universal Permissive License (UPL), Version 1.0
+# 
+# Subject to the condition set forth below, permission is hereby granted to any
+# person obtaining a copy of this software, associated documentation and/or data
+# (collectively the "Software"), free of charge and under any and all copyright
+# rights in the Software, and any and all patent rights owned or freely
+# licensable by each licensor hereunder covering either (i) the unmodified
+# Software as contributed to or provided by such licensor, or (ii) the Larger
+# Works (as defined below), to deal in both
+# 
+# (a) the Software, and
+# (b) any piece of software and/or hardware listed in the lrgrwrks.txt file if
+# one is included with the Software (each a "Larger Work" to which the Software
+# is contributed by such licensors),
+# without restriction, including without limitation the rights to copy, create
+# derivative works of, display, perform, and distribute the Software and make,
+# use, sell, offer for sale, import, export, have made, and have sold the
+# Software and the Larger Work(s), and to sublicense the foregoing rights on
+# either these or other terms.
+# 
+# This license is subject to the following condition:
+# The above copyright notice and either this complete permission notice or at
+# a minimum a reference to the UPL must be included in all copies or
+# substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# Control of substitutions ins via the mutate.input.substitutions.doSubstitutions property, if this is true
+# then substitutions will be looked for, it defaults to false (to preserve previous behavior)
+#
+# Substitutions are applied to any JSON that is added / replaced through mappings. There 
+# can be multiple placeholders in an input string 
+#
+# If there is no mapping but a substitution is found in the original JSON input then
+# it will be substituted (maepings will override anything in the input JSON)
+#
+# In the input text a substitution placeholder will start with the value in mutate.input.substitutions.substitutionStart
+# if it's not provided it will default to {{ (this is used in the examples below)
+#
+# In the input text a substitution placeholder will end with the value in mutate.input.substitutions.substitutionEnd
+# if it's not provided it will default to }} (this is used in the examples below)
+#
+# If there is no substitution found for a placeholder then an error is generated and the deployment will not proceed.
+#
+substitutions:
+  # This is a set of name / value pairs for potential substitutions, ONLY string values will be examined
+  # if a substitution is needed then the EXACT name is looked for, this is case sensitive.
+  # An input string with a placeholder however may reasult in a value may not be a string. Thus to replace a port number 
+  # the input would be port: "{{portNumber}}" but the result may be port: 8080 (assuming portNumber was a string)
+  # The code tries to determine the most appropriate resulting type after substitution, using the following approach
+  # First if the result after placeholder substitution resolves to an empty string the json value will be of type string
+  # Next if the result after placeholder substitution can be converted to an integer the json value will be of type number
+  # Next if the result after placeholder substitution can be converted to a long the json value will be of type number
+  # Next if the result after placeholder substitution can be converted to a double the json value will be of type number
+  # Next if the result after placeholder substitution can be converted to a boolean the json value will be of type boolean
+  # Lastly if the result after placeholder substitution cann't be converted to any of the above the json value will be of type number
+  # Noew that as an empty string is perfectly valid and as such cant be differentiated from the 
+  # so for example looking at this then if the substitution found a name of {{testNumber} then
+  # it would be replaced with 100
+  testNumber: 100
+  testBoolean: true
+  # If a matching name is found then the value is applied
+  # names can be grouped together for convenience of management HOWEVER
+  # in that case the name used in the substitution must include all elements of the name separated .
+  # so basically JSON object notation.
+  # so for example looking at this then if the substitution found a name of {{imageRegistry.localOCIR}} then
+  # it would be replaced with "fra.ocir.io"
+  imageRegistry:
+    localOCIR: "fra.ocir.io"
+    namespace: "dummy namespace"
+  # When used this will end up with the port as a number, but the placeholder must be in a string 
+  # e.g. "containerPort": "{{container.ngnix.port}}" (if your yaml validation will not error on that of course)
+  container:
+    ngnix:
+      port: 80
