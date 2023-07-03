@@ -11,9 +11,9 @@ Download step from  https://smallstep.com/docs/step-cli
 
 set KEYS_DIR to point to where the certs will be, and STEP_CMD to where the step command is (for mac's it's in the location shown for MacOS Venture at least)
 
-`KEYS_DIR=```pwd```/certificates`
+`export KEYS_DIR=```pwd```/certificates`
 
-`STEP_CMD=/usr/local/bin/step`
+`export STEP_CMD=/usr/local/bin/step`
 
 ## Create the certificates
 
@@ -21,10 +21,11 @@ set KEYS_DIR to point to where the certs will be, and STEP_CMD to where the step
 
 We need to specify the password to use to encrypt the certificates. For ease of use I'm using `deploymentmacpassword` OF course you should NEVER use that in production
 
-`KEY_PASSWORD=deploymentmacpassword`
+`export KEY_PASSWORD=deploymentmacpassword`
+
 `echo $KEY_PASSWORD > $KEYS_DIR/password`
 
-For these instructions this will be used for every password, in reality you wouldn't do this but would do use a different password for keay key and key store
+For these instructions this will be used for every password, in reality you wouldn't do this but would do use a different password for key key and key store
 
 ### The root certificate authority key / certificate
 
