@@ -50,7 +50,8 @@ mutationEngine:
       # do we look for substitutions in the incoming JSON or the replacement settings ?
       # defaults to false (Only applied to string values)
       doSubstitutions: "true"
-      # indicates tha start of a substitution placeholder defaults to {{
-      substitutionStart: "<["
-      # indicates tha end of a substitution placeholder defaults to }}
-      substitutionEnd: "]>"
+      # Be warned, the kubectl parser can only handle certaikn characters in the text, . seems to be OK, but  {} or [] are definately not
+      # indicates tha start of a substitution placeholder defaults to ...
+      substitutionStart: "..."
+      # indicates tha end of a substitution placeholder defaults to ...
+      substitutionEnd: "..."
