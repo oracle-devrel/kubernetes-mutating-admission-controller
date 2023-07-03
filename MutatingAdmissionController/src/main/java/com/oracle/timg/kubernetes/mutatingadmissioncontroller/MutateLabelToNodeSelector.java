@@ -100,6 +100,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class MutateLabelToNodeSelector {
 
+	private static final String[] PROTECTED_NAMESPACES = { "kube-system" };
 	private static final String ARRAY_CONFIG_ELEMENT_TYPE_CONFIG = "arrayElementConfigType";
 	private static final String ARRAY_VALUE_CONFIG = "arrayValue";
 	private static final String ARRAY_KEY_VALUE_CONFIG = "arrayKeyValue";
@@ -140,6 +141,7 @@ public class MutateLabelToNodeSelector {
 	@Inject
 	public MutateLabelToNodeSelector(
 			@ConfigProperty(name = "mutationEngine.targetNamespaces", defaultValue = "") String targetNamespacesConfig,
+			@ConfigProperty(name = "mutationEngine.protectSystemNamespaces", defaultValue = "true") boolean protectSystemNamespaces,
 			@ConfigProperty(name = "mutationEngine.input.mappings.doMappings", defaultValue = "true") boolean doMappings,
 			@ConfigProperty(name = "mutationEngine.input.mappings.labelName", defaultValue = "targetMapping") String inputLabelName,
 			@ConfigProperty(name = "mutationEngine.input.mappings.requireMapping", defaultValue = "false") boolean requireMapping,
@@ -150,7 +152,15 @@ public class MutateLabelToNodeSelector {
 			Config config) {
 		this.targetNamespaces = Arrays.stream(targetNamespacesConfig.split(",")).map(namespace -> namespace.trim())
 				.filter(name -> !name.equals("NONE")).collect(Collectors.toSet());
-		log.info("Targeting namespaces " + this.targetNamespaces + " based on input string " + targetNamespacesConfig);
+		log.info("Targeting namespaces before protected namespaces removal" + this.targetNamespaces
+				+ " based on input string " + targetNamespacesConfig);
+		if (protectSystemNamespaces) {
+			for (String protectedNamespace : PROTECTED_NAMESPACES) {
+				this.targetNamespaces.remove(protectedNamespace);
+			}
+			log.info("Targeting namespaces post removal" + this.targetNamespaces + " protected namespaces list is "
+					+ PROTECTED_NAMESPACES);
+		}
 		this.inputLabelName = inputLabelName;
 		log.info("inputLabelName=" + inputLabelName);
 		this.requireMapping = requireMapping;

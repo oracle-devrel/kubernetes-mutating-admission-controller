@@ -1,5 +1,16 @@
 # Deployment Mutating Admission Controller
 
+## Severe danger Will Robinson, Danger - AKA MAJOR WARNING
+
+When deployed this mutating admission controller for any of the targeted namespaces (except kube-system, see below) will allow the modification or addition of any field all deployments (Create / update) without the involvement (or potentially even knowledge) of the caller. This means that it could (for example) replace the details of a security login, certificates or silently add a sidecar container that acts as a "man in the middle" attack. As such it is **VERY** dangerous, and should only ever be used under significant caution.
+
+While it's (possibly) OK to use this for testing or development purposes using it in a production cluster may cause major security issues, especially if steps are not taken to protect the underlying configuration from malicious actors. I would recommend that if you decide a capability is useful (for example dynamically replacing the image location to make migrating between image repos easier) that you create a simple bit of code that only does that.
+
+Under no circumstances should this be run against the kube-system namespace unless you are 100% certain you know what you're doing - doing so could result in an unusable cluster as kube-system services may fail to run. The code will remove kube-system from the list of namespaces the controller will run against if it is specified, to override this (and this is not recommended) you will have to set the configuration option `mutationEngine.protectNamespaces` to false (it defaults to true).
+
+You should also read about the implications of using the MutatingAdmissionWebhook in the [Kubernetes admission controller documentation](!https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/)
+
+
 ## What this is
 
 A project designed to let work with the Kubernetes Mutating Admission Controller webhook mechanism to add settings to your deployments on the fly based on a configuration tree and a label in the deployment.
