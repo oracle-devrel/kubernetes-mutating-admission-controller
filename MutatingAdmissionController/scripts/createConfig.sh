@@ -37,6 +37,10 @@
 # note this should be run from the project home
 # delete the existing configs
 kubectl delete configmap deploymentmac-config-map --ignore-not-found=true 
+kubectl delete configmap mappings-config-map --ignore-not-found=true 
+kubectl delete configmap substitutions-config-map --ignore-not-found=true 
 kubectl delete secret deploymentmac-secret --ignore-not-found=true 
 kubectl create configmap deploymentmac-config-map --from-file=config
+kubectl create configmap mappings-config-map --from-file=mappings
+kubectl create configmap substitutions-config-map --from-file=substitutions
 kubectl create secret generic deploymentmac-secret --from-file=configsecure

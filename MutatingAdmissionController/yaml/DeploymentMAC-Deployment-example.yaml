@@ -61,6 +61,12 @@ spec:
         - name: deploymentmac-config-map-vol
           mountPath: /helidon/config
           readOnly: true
+        - name: mappings-config-map-vol
+          mountPath: /helidon/mappings
+          readOnly: true
+        - name: substitutions-config-map-vol
+          mountPath: /helidon/substitutions
+          readOnly: true
         - name: deploymentmac-secret-vol
           mountPath: /helidon/configsecure
           readOnly: true
@@ -68,6 +74,12 @@ spec:
       - name: deploymentmac-config-map-vol
         configMap:
           name: deploymentmac-config-map
+      - name: mappings-config-map-vol
+        configMap:
+          name: mappings-config-map
+      - name: substitutions-config-map-vol
+        configMap:
+          name: substitutions-config-map
       - name: deploymentmac-secret-vol
         secret:
           secretName: deploymentmac-secret
