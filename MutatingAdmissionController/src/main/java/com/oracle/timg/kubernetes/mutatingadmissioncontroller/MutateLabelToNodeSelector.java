@@ -101,6 +101,8 @@ import lombok.extern.slf4j.Slf4j;
 public class MutateLabelToNodeSelector {
 
 	private static final String[] PROTECTED_NAMESPACES = { "kube-system" };
+	private static final String[] DO_NOT_SUBSTITUTE_ON_PATHS = {
+			"/metadata/annotations/kubectl.kubernetes.io/last-applied-configuration", "/metadata/managedFields" };
 	private static final String ARRAY_CONFIG_ELEMENT_TYPE_CONFIG = "arrayElementConfigType";
 	private static final String ARRAY_VALUE_CONFIG = "arrayValue";
 	private static final String ARRAY_KEY_VALUE_CONFIG = "arrayKeyValue";
@@ -113,8 +115,8 @@ public class MutateLabelToNodeSelector {
 	private static final String METADATA_OBJECT = "metadata";
 	public final static String API_VERSION_FIELD = "apiVersion";
 	public final static String KIND_FIELD = "kind";
-	public final static String SUBSTITUTION_START_DEFAULT = "{{";
-	public final static String SUBSTITUTION_END_DEFAULT = "}}";
+	public final static String SUBSTITUTION_START_DEFAULT = "...";
+	public final static String SUBSTITUTION_END_DEFAULT = "...";
 
 	public final static String REQUEST_OBJECT = "request";
 	public final static String UID_FIELD = "uid";
@@ -137,6 +139,7 @@ public class MutateLabelToNodeSelector {
 	private final boolean doSubstitutions;
 	private final Map<String, Config> mappingsConfig = new HashMap<>();
 	private final Map<String, String> substitutionsConfig = new HashMap<>();
+	private final Set<String> doNotSubstituteOnPaths;
 
 	@Inject
 	public MutateLabelToNodeSelector(
@@ -161,6 +164,8 @@ public class MutateLabelToNodeSelector {
 			log.info("Targeting namespaces post removal" + this.targetNamespaces + " protected namespaces list is "
 					+ PROTECTED_NAMESPACES);
 		}
+		doNotSubstituteOnPaths = Arrays.stream(DO_NOT_SUBSTITUTE_ON_PATHS).collect(Collectors.toSet());
+		log.info("Non substitution paths are " + doNotSubstituteOnPaths);
 		this.inputLabelName = inputLabelName;
 		log.info("inputLabelName=" + inputLabelName);
 		this.requireMapping = requireMapping;
@@ -343,10 +348,6 @@ public class MutateLabelToNodeSelector {
 				.kind(admissionRequestKind).response(responseData).build();
 		Jsonb jsonb = JsonbBuilder.create(new JsonbConfig().withFormatting(true));
 		log.debug("Empty Response is\n" + jsonb.toJson(response));
-		if (mappingsConfig.size() == 0) {
-			log.info("no mappings in the config, just returned request");
-			return response;
-		}
 		if (requestOperation == null) {
 			log.warn("Incomming request " + incommingRequest + " has an unknown operation type "
 					+ requestOperationString + " will not process");
@@ -389,7 +390,9 @@ public class MutateLabelToNodeSelector {
 			// if we are doing substitutions then build those patched first
 			if (doSubstitutions) {
 				try {
+					log.info("Starting to process substitutions on inbound");
 					applySubstitutionsOnInboundJson(requestObject, patchBuilder, "");
+					log.info("Completed processing substitutions");
 				} catch (MutatingAdmissionControllerSubstitutionMissingPlaceholderException
 						| MutatingAdmissionControllerSubstitutionMissingSubstitutionException e) {
 					String msg = "Exception processing substitutions on incomming data, " + e.getLocalizedMessage();
@@ -400,6 +403,11 @@ public class MutateLabelToNodeSelector {
 				}
 			}
 			if (doMappings) {
+				log.info("Starting to process mappings on inbound");
+				if (mappingsConfig.size() == 0) {
+					log.info("no mappings in the config, just returned request");
+					return response;
+				}
 				String requestKind = requestObject.getString(KIND_FIELD);
 				JsonObject metaData = requestObject.getJsonObject(METADATA_OBJECT);
 				JsonObject labels = metaData.getJsonObject(LABELS_OBJECT);
@@ -470,6 +478,7 @@ public class MutateLabelToNodeSelector {
 					}
 				}
 			}
+			log.info("Completed processing mappings");
 		}
 		JsonPatch patch = patchBuilder.build();
 		log.debug("Resulting patch is " + jsonPrettyPrint(patch.toJsonArray()));
@@ -554,6 +563,10 @@ public class MutateLabelToNodeSelector {
 	private void applySubstitutionsOnInboundJson(JsonValue requestValue, JsonPatchBuilder patchBuilder, String path)
 			throws MutatingAdmissionControllerSubstitutionMissingPlaceholderException,
 			MutatingAdmissionControllerSubstitutionMissingSubstitutionException {
+		if (doNotSubstituteOnPaths.contains(path)) {
+			log.info("Path " + path + " is on the do not substitute list, ignoring");
+			return;
+		}
 		ValueType type = requestValue.getValueType();
 		switch (type) {
 		case ARRAY: {
