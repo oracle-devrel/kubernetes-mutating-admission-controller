@@ -134,7 +134,7 @@ public class MutateLabelToNodeSelector {
 	private final boolean requireMapping;
 	private final boolean errorOnMissingMapping;
 	private final boolean doSubstitutions;
-	private final Map<String, Config> mappingsConfig;
+	private final Map<String, Config> mappingsConfig = new HashMap<>();
 	private final Map<String, String> substitutionsConfig = new HashMap<>();
 
 	@Inject
@@ -168,24 +168,68 @@ public class MutateLabelToNodeSelector {
 		// dumpConfigNames(config, "Root");
 		Config mutateConfigSection = config.get("mutationEngine");
 		dumpConfigNames(mutateConfigSection, "mutationEngine");
-		Config mappingsConfigSection = config.get("mappings");
-		log.info("Mutate -> mappings tree is \n" + dumpConfigTree(mappingsConfigSection, 0, false));
-		this.mappingsConfig = mappingsConfigSection.asNodeList().get().stream()
-				.collect(Collectors.toMap(mapping -> mapping.name(), mapping -> mapping));
-		log.info("Will use the following labels for mappings" + this.mappingsConfig.keySet());
+//		move the loadingof mappings and substitutions into a separate method, put 
+//		setup a config change watcher to call that to allow for dynamic updates to 
+//		the mappings and subsitutions
+//		have to put them all in a synchronized losk to prevent things changing while
+//		processing a request
+		if (doMappings) {
+			Config mappingsConfigSection = config.get("mappings");
+			if (mappingsConfigSection.exists()) {
+				loadMappingsConfig(mappingsConfigSection);
+			} else {
+				log.warn("Can't load mappings as config section " + mappingsConfigSection.key().toString()
+						+ " does not exist");
+			}
+			// register to be called if updated, this should kick in even if the config
+			// section didn't exist this time but does in the future
+			mappingsConfigSection.onChange(new MappingConfigUpdateConsumer(this));
+		} else {
+			log.warn("Mappings disabled in core config, not loading or monitoring for mapping changes");
+		}
 		log.info("Substitution options doSubstitutions=" + doSubstitutions + ", substitutionStart=" + substitutionStart
 				+ ", substitutionEnd=" + substitutionEnd);
 		if (doSubstitutions) {
 			Config substitutionsConfigSection = config.get("substitutions");
 			if (substitutionsConfigSection.exists()) {
 				dumpConfigNames(substitutionsConfigSection, "substitutions");
-				loadSubstitutions(substitutionsConfigSection, "");
+				loadSubstitutionsConfig(substitutionsConfigSection, "");
 				log.info("Substitutions map is " + substitutionsConfig.toString());
 			} else {
 				log.warn("Asked to perform substitutions, but no substitutions section found in the config");
 			}
+			substitutionsConfigSection.onChange(new SubstitutionConfigUpdateConsumer(this));
 		} else {
-			log.info("Substitutions disabled");
+			log.info("Substitutions disabled in core config, not loading or monitoring for substitution changes");
+		}
+	}
+
+	void loadMappingsConfig(Config mappingsConfigSection) {
+		// stop modi
+		synchronized (this) {
+			log.info("Mutate -> mappings tree is \n" + dumpConfigTree(mappingsConfigSection, 0, false));
+			// remove all the existing mappings
+			mappingsConfig.clear();
+			mappingsConfigSection.asNodeList().get().stream()
+					.forEach(mapping -> mappingsConfig.put(mapping.name(), mapping));
+			log.info("Will use the following labels for mappings" + this.mappingsConfig.keySet());
+
+		}
+	}
+
+	void loadSubstitutionsConfig(Config substitutionsConfigSection, String namePrefix) {
+		if (substitutionsConfigSection.exists()) {
+			// synchronize to protect against config changes while processing
+			synchronized (this) {
+				substitutionsConfig.clear();
+				log.info("Substitutsions -> Substitutaions tree is \n"
+						+ dumpConfigTree(substitutionsConfigSection, 0, false));
+				loadSubstitutions(substitutionsConfigSection, namePrefix);
+				log.info("Will use the following labels for substitutaions" + this.substitutionsConfig.keySet());
+			}
+		} else {
+			log.warn("Can't load substitutions as config section " + substitutionsConfigSection.key().toString()
+					+ " does not exist");
 		}
 	}
 
@@ -329,87 +373,91 @@ public class MutateLabelToNodeSelector {
 			response.getStatus().setMessage(msg);
 			return response;
 		}
-		// if we are doing substitutions then build those patched first
-		if (doSubstitutions) {
-			try {
-				applySubstitutionsOnInboundJson(requestObject, patchBuilder, "");
-			} catch (MutatingAdmissionControllerSubstitutionMissingPlaceholderException
-					| MutatingAdmissionControllerSubstitutionMissingSubstitutionException e) {
-				String msg = "Exception processing substitutions on incomming data, " + e.getLocalizedMessage();
-				log.warn(msg);
-				response.getStatus().setCode(400);
-				response.getStatus().setMessage(msg);
-				return response;
-			}
-		}
-		if (doMappings) {
-			String requestKind = requestObject.getString(KIND_FIELD);
-			JsonObject metaData = requestObject.getJsonObject(METADATA_OBJECT);
-			JsonObject labels = metaData.getJsonObject(LABELS_OBJECT);
-			if (labels == null) {
-				String msg = "Can't locate " + METADATA_OBJECT + " -> " + LABELS_OBJECT;
-				if (requireMapping) {
-					msg += ", cannot proceed and rejecting request";
-					log.warn(msg);
-					response.getStatus().setCode(400);
-					response.getStatus().setMessage(msg);
-					return response;
-				} else {
-					msg += ", will not process this request";
-					log.info(msg);
-					return response;
-				}
-			}
-			// is there an annotation with the name in the config file ? If so we can
-			// process it
-			String inputLabel;
-			if (labels.containsKey(inputLabelName)) {
-				inputLabel = labels.getString(inputLabelName);
-				log.info("Deployment " + requestName + " of type " + requestKind + " has an label for " + inputLabelName
-						+ " with value " + inputLabel + " continuing");
-			} else {
-				String msg = "Deployment " + requestName + " does not contain a label for " + inputLabelName;
-				if (requireMapping) {
-					msg += ", cannot proceed and rejecting request";
-					log.warn(msg);
-					response.getStatus().setCode(400);
-					response.getStatus().setMessage(msg);
-					return response;
-				} else {
-					msg += ", will not process this request";
-					log.info(msg);
-					return response;
-				}
-			}
-			// do we know how to handle this label ?
-			Config selectedMappingConfig = mappingsConfig.get(inputLabel);
-			if (selectedMappingConfig == null) {
-				String msg = "No mapping config found for mapping " + inputLabel;
-				if (errorOnMissingMapping) {
-					msg += ", cannot proceed and rejecting request";
-					log.warn(msg);
-					response.getStatus().setCode(400);
-					response.getStatus().setMessage(msg);
-					return response;
-				} else {
-					msg += ", will not process this request";
-					log.info(msg);
-					return response;
-				}
-			} else {
-				log.info("Located mapping config for mapping " + inputLabel + " will process this request");
-			}
-			log.info("Selected mapping is\n" + dumpConfigTree(selectedMappingConfig, 0, false));
-			// for each of the objects in the config tree try to process it
-			List<Config> nodes = selectedMappingConfig.asNodeList().get();
-			for (Config node : nodes) {
+		// sync on the objet to protect against config changes happening while
+		// processing
+		synchronized (this) {
+			// if we are doing substitutions then build those patched first
+			if (doSubstitutions) {
 				try {
-					processMappings(requestObject, node, selectedMappingConfig, patchBuilder, "");
-				} catch (MutationAdmissionControllerException e) {
-					log.warn("Encountered error processing request\n" + e.getLocalizedMessage());
+					applySubstitutionsOnInboundJson(requestObject, patchBuilder, "");
+				} catch (MutatingAdmissionControllerSubstitutionMissingPlaceholderException
+						| MutatingAdmissionControllerSubstitutionMissingSubstitutionException e) {
+					String msg = "Exception processing substitutions on incomming data, " + e.getLocalizedMessage();
+					log.warn(msg);
 					response.getStatus().setCode(400);
-					response.getStatus().setMessage(e.getLocalizedMessage());
+					response.getStatus().setMessage(msg);
 					return response;
+				}
+			}
+			if (doMappings) {
+				String requestKind = requestObject.getString(KIND_FIELD);
+				JsonObject metaData = requestObject.getJsonObject(METADATA_OBJECT);
+				JsonObject labels = metaData.getJsonObject(LABELS_OBJECT);
+				if (labels == null) {
+					String msg = "Can't locate " + METADATA_OBJECT + " -> " + LABELS_OBJECT;
+					if (requireMapping) {
+						msg += ", cannot proceed and rejecting request";
+						log.warn(msg);
+						response.getStatus().setCode(400);
+						response.getStatus().setMessage(msg);
+						return response;
+					} else {
+						msg += ", will not process this request";
+						log.info(msg);
+						return response;
+					}
+				}
+				// is there an annotation with the name in the config file ? If so we can
+				// process it
+				String inputLabel;
+				if (labels.containsKey(inputLabelName)) {
+					inputLabel = labels.getString(inputLabelName);
+					log.info("Deployment " + requestName + " of type " + requestKind + " has an label for "
+							+ inputLabelName + " with value " + inputLabel + " continuing");
+				} else {
+					String msg = "Deployment " + requestName + " does not contain a label for " + inputLabelName;
+					if (requireMapping) {
+						msg += ", cannot proceed and rejecting request";
+						log.warn(msg);
+						response.getStatus().setCode(400);
+						response.getStatus().setMessage(msg);
+						return response;
+					} else {
+						msg += ", will not process this request";
+						log.info(msg);
+						return response;
+					}
+				}
+				// do we know how to handle this label ?
+				Config selectedMappingConfig = mappingsConfig.get(inputLabel);
+				if (selectedMappingConfig == null) {
+					String msg = "No mapping config found for mapping " + inputLabel;
+					if (errorOnMissingMapping) {
+						msg += ", cannot proceed and rejecting request";
+						log.warn(msg);
+						response.getStatus().setCode(400);
+						response.getStatus().setMessage(msg);
+						return response;
+					} else {
+						msg += ", will not process this request";
+						log.info(msg);
+						return response;
+					}
+				} else {
+					log.info("Located mapping config for mapping " + inputLabel + " will process this request");
+				}
+				log.info("Selected mapping is\n" + dumpConfigTree(selectedMappingConfig, 0, false));
+				// for each of the objects in the config tree try to process it
+				List<Config> nodes = selectedMappingConfig.asNodeList().get();
+				for (Config node : nodes) {
+					try {
+						processMappings(requestObject, node, selectedMappingConfig, patchBuilder, "");
+					} catch (MutationAdmissionControllerException e) {
+						log.warn("Encountered error processing request\n" + e.getLocalizedMessage());
+						response.getStatus().setCode(400);
+						response.getStatus().setMessage(e.getLocalizedMessage());
+						return response;
+					}
 				}
 			}
 		}
