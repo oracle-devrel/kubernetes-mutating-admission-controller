@@ -37,7 +37,7 @@ kind: Deployment
 metadata:
   name: nginx
   labels:
-    nextflowNodeSelectorConf: cpuIntensive
+    mutatorMapping: cpuIntensive
 spec:
   selector:
     matchLabels:
