@@ -46,7 +46,7 @@ SOFTWARE. -->
 	</parent>
 	<groupId>com.oracle.timg.demo</groupId>
 	<artifactId>mutatingadmissioncontroller</artifactId>
-	<version>0.9.0</version>
+	<version>1.0.0</version>
 
 	<properties>
 		<mainClass>io.helidon.microprofile.cdi.Main</mainClass>

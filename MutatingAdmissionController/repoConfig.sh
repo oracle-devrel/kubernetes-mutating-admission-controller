@@ -33,5 +33,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-REPO=lhr.ocir.io/frsxwtjslf35
+REPO=fra.ocir.io/frsxwtjslf35
 echo Using repository $REPO
+# probabaly should match the pom.xml for consistency
+VERSION=1.0.0

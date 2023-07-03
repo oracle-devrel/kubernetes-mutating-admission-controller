@@ -1,4 +1,3 @@
-#!/bin/bash
 # Copyright (c) 2023 Oracle and/or its affiliates.
 # 
 # The Universal Permissive License (UPL), Version 1.0
@@ -33,9 +32,42 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-DOCKER_CMD=$HOME/.rd/bin/docker 
-IMAGE_NAME=deploymentmac
-source ./repoConfig.sh
-$DOCKER_CMD build  --tag "$IMAGE_NAME":"$VERSION" --tag "$IMAGE_NAME":latest --tag "$REPO"/"$IMAGE_NAME":"$VERSION" --tag "$REPO"/"$IMAGE_NAME":latest --file Dockerfile .
-$DOCKER_CMD push "$REPO"/"$IMAGE_NAME":latest
-$DOCKER_CMD push "$REPO"/"$IMAGE_NAME":"$VERSION"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deploymentmac
+spec:
+  replicas: 2
+  strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 0 
+  selector:
+    matchLabels:
+      app: deploymentmac
+  template:
+    metadata:
+      labels:
+        app: deploymentmac
+    spec:
+      containers:
+      - name: deploymentmac
+        image: <container repo>/<storage namespace>/deploymentmac:1.0.0
+        imagePullPolicy: Always 
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: deploymentmac-config-map-vol
+          mountPath: /helidon/config
+          readOnly: true
+        - name: deploymentmac-secret-vol
+          mountPath: /helidon/configsecure
+          readOnly: true
+      volumes:
+      - name: deploymentmac-config-map-vol
+        configMap:
+          name: deploymentmac-config-map
+      - name: deploymentmac-secret-vol
+        secret:
+          secretName: deploymentmac-secret

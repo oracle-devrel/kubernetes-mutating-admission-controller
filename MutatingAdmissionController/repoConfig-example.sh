@@ -33,9 +33,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-DOCKER_CMD=$HOME/.rd/bin/docker 
-IMAGE_NAME=deploymentmac
-source ./repoConfig.sh
-$DOCKER_CMD build  --tag "$IMAGE_NAME":"$VERSION" --tag "$IMAGE_NAME":latest --tag "$REPO"/"$IMAGE_NAME":"$VERSION" --tag "$REPO"/"$IMAGE_NAME":latest --file Dockerfile .
-$DOCKER_CMD push "$REPO"/"$IMAGE_NAME":latest
-$DOCKER_CMD push "$REPO"/"$IMAGE_NAME":"$VERSION"
+# replace with your container repo (e.g. fra.ocir.io) and for some clouds at least storage namespace
+REPO=<container repo hostname>/<storage namespace>
+echo Using repository $REPO
+# probabaly should match the pom.xml for consistency
+VERSION=1.0.0

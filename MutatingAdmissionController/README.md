@@ -92,9 +92,9 @@ This code was written using the Helidon framework to handle all of the REST requ
 
 Configuration settings can of course be defined in any of the configuration sources used by the Helidon configuration system, including the yaml files below. However it is expected that the configurations below would be a good place to start. If you want to use your own structure then Helidon does load the meta-config.yaml configuration option which will allow you to specify your own config files locations.  
 
-Note that version 1.0.0 only supported the `./configsecure/servertls.yaml` and `config/mappingconfig.yaml` files. The structure was changed and the `config/mappingconfig.yaml` file is no longer loaded. 
+Note that the previous version (0.0.1) only supported the `./configsecure/servertls.yaml` and `config/mappingconfig.yaml` files. The structure was changed and the `config/mappingconfig.yaml` file is no longer loaded. 
 
-The configs used are below: (All relative to the application run directory)
+The configs used for version 1.0.0 are below: (All relative to the application run directory)
 
   ```
      ./configsecure

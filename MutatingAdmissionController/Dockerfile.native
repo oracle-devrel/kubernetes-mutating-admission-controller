@@ -68,8 +68,8 @@ FROM scratch
 WORKDIR /helidon
 
 # Copy the binary built in the 1st stage
-COPY --from=build /helidon/target/nextflowmac .
+COPY --from=build /helidon/target/mutatingadmissioncontroller .
 
-ENTRYPOINT ["./nextflowmac"]
+ENTRYPOINT ["./mutatingadmissioncontroller"]
 
 EXPOSE 8080
