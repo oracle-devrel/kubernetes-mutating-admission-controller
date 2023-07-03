@@ -122,6 +122,20 @@ The `substitutions.yaml` file are the substitutions to be applied. More on this 
 
 When using Kubernetes the configsecure and config directories need to be put into Kubernetes secrets and config maps which will be used as sources for volumes and mounted into the container at the locations above.
 
+### Updates to the config
+
+You can modify the config files and the helidon config system will pick up updates to the mappings.yaml and substitutions.yaml files and dynamically reload the mappings / substitutions (only if the doMappings and / or doSubstitutions are true). This has been tested and works fine. The provided meta-config checks every 5 seconds.
+
+HOWEVER ..... Kubernetes (in 1.26 at least) does take some time to propagate changes in a config map (or secret) into the pods. The [documentation](!https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/#mounted-configmaps-are-updated-automatically) says this can be (with the default kubernetes setup)
+
+### How to update a kubernetes config map
+
+The kubectl replace command doesn't work on a config map for some reason nowadays, however you can us  the --dry-run flag coupled with kubectl replace - see below
+
+`kubectl create configmap mappings-config-map --from-file=mappings -o yaml --dry-run | kubectl replace -f - --namespace management`
+
+`kubectl create configmap substitutions-config-map --from-file=substitutions -o yaml --dry-run | kubectl replace -f - --namespace management`
+
 
 ### The main mutator configuration
 
@@ -173,9 +187,9 @@ The structure is as follows :
  
  `      doSubstitutions:` If true and if mappings are operational then the substitution engine will look for substitutions in the mappings specified (see below) of if there isn't a substitution in the mappings for a JSON string field in the incoming deployment. 
  
- `      substitutionStart:` it present a string indicating the start of a substitution placeholder, defaults to `{{` if not set
+ `      substitutionStart:` it present a string indicating the start of a substitution placeholder, defaults to `...` if not set. You have to be carefull here to ensure that your chosen sequence won't; cause problems with earlier stages of kubernetes processing, for example using {} or [] will generally break the yaml to JSON conversion process done with in kubectl
  
- `      substitutionEnd:` it present a string indicating the end of a substitution placeholder, defaults to `}}` if not set Note that this can be the same character sequence as the substitutionStart of desired as the engine looks for the the end sequence after the start.
+ `      substitutionEnd:` it present a string indicating the end of a substitution placeholder, defaults to `...` if not set Note that this can be the same character sequence as the substitutionStart of desired as the engine looks for the the end sequence after the start.
 
 ### The mapping configuration
 
@@ -289,13 +303,13 @@ The code will accept substitutions as part of the config tree anywhere you can f
 
 For example a mapping may have a arrayValue that includes
 
-`image: "{{imageRegistry.localOCIR}}/{{imageRegistry.namespace}}ngnix:latest"`
+`image: "...imageRegistry.localOCIR.../...imageRegistry.namespace.../ngnix:latest"`
 
 The substitutions will be applied before the image entry is applied to the container. Note that multiple placeholders can be substituted if desired.
 
 Alternatively the incoming deployment might have an image specification for a container 
 
-`                                "image": "{{imageRegistry.localOCIR}}/ngnix:latest"`
+`                                "image": "...imageRegistry.localOCIR.../ngnix:latest"`
 
 In which case the substitutions will be applied to that (assuming that there is no mapping that overrides this)
 
@@ -332,7 +346,7 @@ substitutions:
   # names can be grouped together for convenience of management HOWEVER
   # in that case the name used in the substitution must include all elements of the name separated .
   # so basically JSON object notation.
-  # so for example looking at this then if the substitution found a name of {{imageRegistry.localOCIR}} then
+  # so for example looking at this then if the substitution found a name of ...imageRegistry.localOCIR... then
   # it would be replaced with "fra.ocir.io"
   imageRegistry:
     localOCIR: "fra.ocir.io"

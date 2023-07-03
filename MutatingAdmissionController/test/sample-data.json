@@ -156,18 +156,18 @@
                     },
                     "spec": {
 						"substitutions": {
-						  "testStringToOCIR" : "{{imageRegistry.localOCIR}}",
-						  "testNumber" : "{{testNumber}}",
-						  "testBoolean" : "{{testBoolean}}"
+						  "testStringToOCIR" : "...imageRegistry.localOCIR...",
+						  "testNumber" : "...testNumber...",
+						  "testBoolean" : "...testBoolean..."
 						},
 						"mappings":{} ,
                         "containers": [
                             {
                                 "name": "nginx",
-                                "image": "{{imageRegistry.localOCIR}}:latest",
+                                "image": "...imageRegistry.localOCIR...:latest",
                                 "ports": [
                                     {
-                                        "containerPort": "{{container.ngnix.port}}",
+                                        "containerPort": "...container.ngnix.port...",
                                         "protocol": "TCP"
                                     }
                                 ],
