@@ -527,7 +527,7 @@ public class MutateLabelToNodeSelector {
 			}
 		} else {
 			if (requestSubValue == null) {
-				log.debug("Json input path " + jsonPathString + " config " + configKey
+				log.trace("Json input path " + jsonPathString + " config " + configKey
 						+ " is an object, no equivalent object in the json input will add");
 				patchBuilder.add(jsonPathString, getJsonValue(selectedMappingConfig));
 			} else {
@@ -536,10 +536,10 @@ public class MutateLabelToNodeSelector {
 					String msg = "Json input path " + jsonPathString + " config " + configKey
 							+ " is an object, equivalent object in the json input is of type " + type
 							+ " and is not a matching type, cannot proceed";
-					log.info(msg);
+					log.trace(msg);
 					throw new MutatingAdmissionControllerTypeMismatchException(msg);
 				}
-				log.debug("Json input path " + jsonPathString + " config " + configKey
+				log.trace("Json input path " + jsonPathString + " config " + configKey
 						+ " is an object, equivalent object in the json input exists will process");
 				List<Config> subConfigNodes = selectedMappingConfig.asNodeList().get();
 				for (Config subConfigNode : subConfigNodes) {
@@ -673,7 +673,7 @@ public class MutateLabelToNodeSelector {
 				String msg = "Json input path " + jsonPathString + " config input " + configKey
 						+ " is a list, equivalent object in the json input is of type " + type
 						+ " and is not a matching type, cannot proceed";
-				log.info(msg);
+				log.warn(msg);
 				throw new MutatingAdmissionControllerTypeMismatchException(msg);
 			}
 			JsonArray configJson = requestSubValue.asJsonArray();
@@ -742,7 +742,7 @@ public class MutateLabelToNodeSelector {
 			String msg = "Json input path prefix " + jsonPathStringPrefix + " config " + configKey
 					+ " is in an array, yet at least one of " + ARRAY_INDEX_CONFIG + ", or " + ARRAY_VALUE_CONFIG
 					+ " is missing, this means that the array item in the json input array cannot be located or created";
-			log.info(msg);
+			log.warn(msg);
 			throw new MutatingAdmissionControllerListConfigMissingFieldsException(msg);
 
 		}
@@ -784,7 +784,7 @@ public class MutateLabelToNodeSelector {
 				patchBuilder.add(jsonPathString, getJsonListValue(selectedMappingConfig));
 			} else if (missingMatchAction == MissingMatchAction.ERROR) {
 				msg += " erroring";
-				log.info(msg);
+				log.warn(msg);
 				throw new MutatingAdmissionControllerListArrayIndexOutOfBoundsException(msg);
 			} else {
 				msg += " ignoring";
@@ -858,7 +858,7 @@ public class MutateLabelToNodeSelector {
 					+ " is in an array, yet it does not define at least one of " + ARRAY_KEY_CONFIG + ", "
 					+ ARRAY_KEY_VALUE_CONFIG + ", or " + ARRAY_VALUE_CONFIG
 					+ " this means that the matching item in the json input array cannot be located or created";
-			log.info(msg);
+			log.warn(msg);
 			throw new MutatingAdmissionControllerListConfigMissingFieldsException(msg);
 
 		}
@@ -880,7 +880,7 @@ public class MutateLabelToNodeSelector {
 				patchBuilder.add(jsonPathString, getJsonListValue(selectedMappingConfig));
 			} else if (missingMatchAction == MissingMatchAction.ERROR) {
 				msg += " erroring";
-				log.info(msg);
+				log.warn(msg);
 				throw new MutatingAdmissionControllerListArrayKeyValueMissingException(msg);
 			} else {
 				msg += " ignoring";
@@ -912,7 +912,7 @@ public class MutateLabelToNodeSelector {
 				String msg = "Scanning input array " + jsonPathString + " to locate object with  " + key + ":"
 						+ keyValue + " but array item " + i + " is not an object, but instead is of type " + type
 						+ " can't handle this";
-				log.info(msg);
+				log.warn(msg);
 				throw new MutatingAdmissionControllerListJsonNotAnObjectException(msg);
 			}
 			log.trace("Json item at index " + i + " is an object");
@@ -923,7 +923,7 @@ public class MutateLabelToNodeSelector {
 						+ " is an object but does not have a key " + key;
 				if (arrayKeyMissingError) {
 					msg += ", arrayKeyMissingError is true, throwing an error";
-					log.info(msg);
+					log.warn(msg);
 					throw new MutatingAdmissionControllerListArrayKeyMissingException(msg);
 				} else {
 					log.trace("In json array input " + jsonPathString + "Json item at index " + i
@@ -977,7 +977,7 @@ public class MutateLabelToNodeSelector {
 				String msg = "Json input path prefix " + jsonPathString + " config " + configKey
 						+ " is a leaf, equivalent object in the json input is of type " + type
 						+ " and is not a matching type, cannot proceed";
-				log.info(msg);
+				log.warn(msg);
 				throw new MutatingAdmissionControllerTypeMismatchException(msg);
 			}
 		}
@@ -1010,7 +1010,7 @@ public class MutateLabelToNodeSelector {
 		} else {
 			String msg = "Config object " + configNodeName + " is type " + selectedMappingConfig.type()
 					+ " which is an unsupported input type ";
-			log.info(msg);
+			log.warn(msg);
 			return Json.createValue(msg);
 		}
 		log.debug("Returning " + builtObject);
@@ -1109,7 +1109,7 @@ public class MutateLabelToNodeSelector {
 			String configKey = configListElement.key().toString();
 			String msg = "Config " + configKey + " is of type " + configListElement.type()
 					+ " and is an unknown or not processable type, cannot proceed";
-			log.info(msg);
+			log.warn(msg);
 			throw new MutatingAdmissionControllerTypeUnsupportedException(msg);
 
 		}

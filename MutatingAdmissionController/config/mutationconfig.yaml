@@ -35,7 +35,7 @@
 mutationEngine:
   # a comman separated list of namespces to review when accepting inputs. If the object namespace is not on this list then 
   # nothing will be modified
-  targetNamespaces: "mactest"
+  targetNamespaces: "mactest, kube-system"
   input:
     mappings:
       # do we run the mappings processs ?
