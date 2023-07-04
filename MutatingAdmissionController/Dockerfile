@@ -56,9 +56,9 @@ FROM openjdk:17-jdk-slim
 WORKDIR /helidon
 
 # Copy the binary built in the 1st stage
-COPY --from=build /helidon/target/nextflowmac.jar ./
+COPY --from=build /helidon/target/mutatingadmissioncontroller.jar ./
 COPY --from=build /helidon/target/libs ./libs
 
-CMD ["java", "-jar", "nextflowmac.jar"]
+CMD ["java", "-jar", "mutatingadmissioncontroller.jar"]
 
 EXPOSE 8080

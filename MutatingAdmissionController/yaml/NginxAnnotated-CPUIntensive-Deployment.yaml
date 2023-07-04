@@ -37,7 +37,7 @@ kind: Deployment
 metadata:
   name: nginx
   labels:
-    nextflowNodeSelectorConf: cpuIntensive
+    mutatorMapping: cpuIntensive
 spec:
   selector:
     matchLabels:
@@ -50,6 +50,6 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: nginx:latest
+        image: nginx:...container.ngnix.version...
         ports:
         - containerPort: 80

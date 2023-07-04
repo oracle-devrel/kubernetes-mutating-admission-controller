@@ -34,4 +34,30 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
-package com.oracle.timg.kubernetes.mutatingadmissioncontroller;
+package com.oracle.timg.kubernetes.mutatingadmissioncontroller.exceptions;
+
+public class MutatingAdmissionControllerSubstitutionException extends MutationAdmissionControllerException {
+
+	private static final long serialVersionUID = 4090412579398936247L;
+
+	public MutatingAdmissionControllerSubstitutionException() {
+	}
+
+	public MutatingAdmissionControllerSubstitutionException(String message) {
+		super(message);
+	}
+
+	public MutatingAdmissionControllerSubstitutionException(Throwable cause) {
+		super(cause);
+	}
+
+	public MutatingAdmissionControllerSubstitutionException(String message, Throwable cause) {
+		super(message, cause);
+	}
+
+	public MutatingAdmissionControllerSubstitutionException(String message, Throwable cause, boolean enableSuppression,
+			boolean writableStackTrace) {
+		super(message, cause, enableSuppression, writableStackTrace);
+	}
+
+}

@@ -66,7 +66,7 @@ fi
 
 KEY_PASSWORD=deploymentmacpassword
 export KEY_PASSWORD
-echo $KEY_PASSWORD >> $KEYS_DIR/password
+echo $KEY_PASSWORD > $KEYS_DIR/password
 
 SERVICE_NAME=deploymentmac
 SERVICE_NAMESPACE=management

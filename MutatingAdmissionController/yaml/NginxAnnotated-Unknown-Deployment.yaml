@@ -37,7 +37,7 @@ kind: Deployment
 metadata:
   name: nginx
   labels:
-    nextflowNodeSelectorConf: deliberatelyUnknown
+    mutatorMapping: deliberatelyUnknown
 spec:
   selector:
     matchLabels:
@@ -50,6 +50,6 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: nginx:latest
+        image: nginx:...container.ngnix.version...
         ports:
         - containerPort: 80

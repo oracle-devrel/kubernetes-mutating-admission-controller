@@ -1,5 +1,16 @@
 # Deployment Mutating Admission Controller
 
+## Severe danger Will Robinson, Danger - AKA MAJOR WARNING
+
+When deployed this mutating admission controller for any of the targeted namespaces (except kube-system, see below) will allow the modification or addition of any field all deployments (Create / update) without the involvement (or potentially even knowledge) of the caller. This means that it could (for example) replace the details of a security login, certificates or silently add a sidecar container that acts as a "man in the middle" attack. As such it is **VERY** dangerous, and should only ever be used under significant caution.
+
+While it's (possibly) OK to use this for testing or development purposes using it in a production cluster may cause major security issues, especially if steps are not taken to protect the underlying configuration from malicious actors. I would recommend that if you decide a capability is useful (for example dynamically replacing the image location to make migrating between image repos easier) that you create a simple bit of code that only does that.
+
+Under no circumstances should this be run against the kube-system namespace unless you are 100% certain you know what you're doing - doing so could result in an unusable cluster as kube-system services may fail to run. The code will remove kube-system from the list of namespaces the controller will run against if it is specified, to override this (and this is not recommended) you will have to set the configuration option `mutationEngine.protectSystemNamespaces` to false (it defaults to true).
+
+You should also read about the implications of using the MutatingAdmissionWebhook in the [Kubernetes admission controller documentation](!https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/)
+
+
 ## What this is
 
 A project designed to let work with the Kubernetes Mutating Admission Controller webhook mechanism to add settings to your deployments on the fly based on a configuration tree and a label in the deployment.
@@ -79,99 +90,81 @@ The webhook definition has a number of things you may need to change, the servic
 This code was written using the Helidon framework to handle all of the REST requests, it also uses Helidon to handle the configuration of not only the Helidon aspects (e.g. port, certificates etc.) but also the input to the mutating process.
 
 
+Configuration settings can of course be defined in any of the configuration sources used by the Helidon configuration system, including the yaml files below. However it is expected that the configurations below would be a good place to start. If you want to use your own structure then Helidon does load the meta-config.yaml configuration option which will allow you to specify your own config files locations.  
 
-The configs used are : (All relative to the application run directory)
+Note that the previous version (0.0.1) only supported the `./configsecure/servertls.yaml` and `config/mappingconfig.yaml` files. The structure was changed and the `config/mappingconfig.yaml` file is no longer loaded. 
+
+The configs used for version 1.0.0 are below: (All relative to the application run directory)
 
   ```
      ./configsecure
        <p12 keystore file>
        servertls.yaml
      ./config
-       mappingconfig.yaml
+       mutationconfig.yaml
+     ./mappings
+       mappings.yaml
+     ./substitutions
+       substitutions.yaml
   ```
+  
+The configuration is loaded in the following order `servertls.yaml, mutationconfig.yaml, mappings.yaml, substitutions.yaml`
 
-The `p12 keystore file` contains the private key for the services and the certificate chain. there is a templaye file in the `templates` directory or if using the scripts to setup certificates that will be created and configured for you
+The `p12 keystore file` contains the private key for the services and the certificate chain. There is an example file or the `templates` directory has a template used by the scripts to setup certificates that will be created and configured for you
 
-the `servertls.yaml` file contains the configuration of the Helidon server. Amongst other things this will define the location of the keystore (the `<p12 keystore file>` and the password used to decrypt it (the certs setup script will configure this for you based on the template in the templates directory)
+the `servertls.yaml` file contains the configuration of the Helidon server, it is required. Amongst other things this will define the location of the keystore (the `<p12 keystore file>` and the password used to decrypt it (the certs setup script will configure this for you based on the template in the templates directory)
 
-The `mappingconfi9g.yaml` file is the actual set of controls for the mapping process, and the various maps to be applied. More on this file later
+The `mutationconfig.yaml` file is the actual set of controls for the mapping process, and the various maps to be applied. More on this file later. This is required.
+
+The `mappings.yaml` file are the mappings to be applied. More on this file later. This is optional.
+
+The `substitutions.yaml` file are the substitutions to be applied. More on this file later. This is optional.
 
 When using Kubernetes the configsecure and config directories need to be put into Kubernetes secrets and config maps which will be used as sources for volumes and mounted into the container at the locations above.
 
+### Updates to the config
 
-### The mapping configuration
+You can modify the config files and the helidon config system will pick up updates to the mappings.yaml and substitutions.yaml files and dynamically reload the mappings / substitutions (only if the doMappings and / or doSubstitutions are true). This has been tested and works fine. The provided meta-config checks every 5 seconds.
 
-The `mappingconfig.yaml` file defines how the mappings will be used. It has the following structure
+HOWEVER ..... Kubernetes (in 1.26 at least) does take some time to propagate changes in a config map (or secret) into the pods. The [documentation](!https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/#mounted-configmaps-are-updated-automatically) says this can be (with the default kubernetes setup)
+
+### How to update a kubernetes config map
+
+The kubectl replace command doesn't work on a config map for some reason nowadays, however you can us  the --dry-run flag coupled with kubectl replace - see below
+
+`kubectl create configmap mappings-config-map --from-file=mappings -o yaml --dry-run | kubectl replace -f - --namespace management`
+
+`kubectl create configmap substitutions-config-map --from-file=substitutions -o yaml --dry-run | kubectl replace -f - --namespace management`
+
+
+### The main mutator configuration
+
+The `mutationconfig.yaml` file defines how the mappings will be used. It has the following structure
 
 ```yaml
-mutate:
-  targetNamespaces: "list,of,comma,separated,namespaces,to,consider,deployments,to,modify"
+mutationEngine:
+  # a comman separated list of namespces to review when accepting inputs. If the object namespace is not on this list then 
+  # nothing will be modified
+  targetNamespaces: "mactest"
   input:
-    # name of the metadata label from the input that will contain the name of the mappings to apply later
-    labelName: "targetMapping"
-    # is a mapping required to be present ?
-    requireMapping: "false"
-    # do we error if we can't find a mapping ?
-    errorOnMissingMapping: "true"
-  # mappings to process the name is the name provided by nextflow, the value is the attributes
-  # to apply to the pods that match. This section is required for the code to run
-  # note that this sctructure reall only works on objects at this point
-  # if it comes across an array then the behaviour is uncertain, but that's OK
-  # for this use case as the current goal is to apply settings at the nodeSelector level
-  mappings:
-    myMutation : 
-      spec:
-        template:
-          spec:
-            containers:
-              # is required, can be either key or index (case insensitive) 
-              # if key then you need a arrayKey, arrayKeyValue and arrayValue config entry and optionally arrayKeyMissingError and arrayKeyValueNoMatchAction
-              # if index then you need an arrayIndex with the value indicating the array index to use in the json and optionally arrayIndexMissingError
-              # Note that if you are adding items to the array using an index then arrayKey and arrayKeyValue are also required.
-            - arrayElementConfigType: "key"
-              arrayKey: "name"
-              # this is optional, if the key can't be found then you have the option to error and reject the request, if false then this is just ignored
-              arrayKeyMissingError: false 
-              arrayKeyValue: "nginx"
-              # this is optional, if there is no item in the JSON from Kubernetes in the list which has a key matching the keyValue then you have the 
-              # choice to ignore this config item totally (default), add a new item to the list (at the end) or error which will reject the entire request.
-              # If yuou chose to add then the code will automatically add an entry to the JSON generated from arrayValue which will have a name of the 
-              # arrayKey value and a value of the arrayKeyValue
-              # Note that if arrayKeyMissingError is false then this no match action will kick in if there are no objects that have a field with the arrayKey. This 
-              # means that if you make a mistake in the name in arrayKey then the action here is what will happen which may not be what you expect
-              arrayKeyValueNoMatchAction: "add" 
-              # indicates what array element in the incomming JSON to use as the incomming source, cannot be less than zero              
-              arrayIndex: 1
-              # what to do if the index is out of bounds of the incomming JSON array see the optins for arrayKeyValueNoMatchAction
-              # Note that unlike location array items using a key / key value if you specify add for an indexed item then you will need to include any 
-              # key / key value in the arrayValue json.
-              arrayIndexMissingError: "add"
-              # the config tree to compare against an existing json or (if add is selected and the existing isn't found) to add.
-              # note that if chosing add and a search on the key you will then the key  : keyValue will be added to this automatically, but not if using index
-              # Of course this also MUST confirm to the expected input formats as it's passed on to kubernetes, so for example specifying 256 for memory 
-              # will actuall mean 256 bytes as that's how kubernrtes interprets it, in reality for that case you'd probabaly want 256Mi meaning 25 Mega bytes
-              arrayValue:
-                resources:
-                  requests:
-                    cpu: "250m"
-                    memory: "4Gi"
-                  limits:
-                    cpu: "500m"
-                    memory: "8Gi"
-            nodeSelector:
-              my-node-label: "value of my label"
-    # this config will set the update strategy at the deployment and a node selector as the pod level
-    muationConfigTwo : 
-      spec:
-        strategy:
-          type: RollingUpdate
-          rollingUpdate:
-            maxSurge: 1
-            maxUnavailable: 0 
-        template:
-          spec:
-            nodeSelector:
-              node-label: "node-selector-label-value"
+    mappings:
+      # do we run the mappings processs ?
+      doMappings: "true"
+      # name of the metadata label from the input that will contain the name of the mappings
+      labelName: "mutatorMapping"
+      # is a mapping required to be present ?
+      requireMapping: "false"
+      # do we error if we can't find a mapping ?
+      errorOnMissingMapping: "true"
+    # These control the substitutions engine
+    substitutions:
+      # do we look for substitutions in the incoming JSON or the replacement settings ?
+      # defaults to false (Only applied to string values)
+      doSubstitutions: "true"
+      # indicates tha start of a substitution placeholder defaults to {{
+      substitutionStart: "{{"
+      # indicates tha end of a substitution placeholder defaults to }}
+      substitutionEnd: "}}"
 ```
 
 The structure is as follows :
@@ -182,13 +175,111 @@ The structure is as follows :
  
  `  input:` - This section defines what the code will look at to determine if it needs to modify the deployment, and what to do if it can'd find a mapping or there is no mapping specified.
  
- `    labelName:` - This contains the name of the label in the deployments metadata / label that indicates what mappings to apply. So if the value was `macMapping` then the code will look into the deployments metadata / label for a key named of macMapping, the value that key contains will be used to locate a mapping section (see later for those). If the incoming deployment does have a metadata / labels section, or the key does not exist in that section then if requireMapping is false the request will be approved with no changes, if not will be rejected. Defaults to `targetMapping`
+ `      doMappings:` If true will modify inbound JSON with the details in the mappings, either replacing existing content or adding new content. If Substitutions are also active (doSubstitutions) then any placeholders in the mappings will be substituted, this means that for example that you could insert an additional container which is based on an image who'se container registry is updated based on the region the program is running in (or whatever is in the substitutions map). 
  
- `    requireMapping:` - If true then missing the metadata / label section or not having the label as defined in labelName will cause the deployment to be rejected, if false it will be accepted. Basically this can be used to force all deployment requests to the namespaces listed to go through the mapping process.
+ `      labelName:` - This contains the name of the label in the deployments metadata / label that indicates what mappings to apply. So if the value was `macMapping` then the code will look into the deployments metadata / label for a key named of macMapping, the value that key contains will be used to locate a mapping section (see later for those). If the incoming deployment does have a metadata / labels section, or the key does not exist in that section then if requireMapping is false the request will be approved with no changes, if not will be rejected. Defaults to `targetMapping`
  
- `    errorOnMissingMapping:` if the deployment requests a mapping that does not exist and this is true then throw an error and block it, if false and we can;t locate a mapping then let it continue unchanged. Defaults to true
+ `      requireMapping:` - If true then missing the metadata / label section or not having the label as defined in labelName will cause the deployment to be rejected, if false it will be accepted. Basically this can be used to force all deployment requests to the namespaces listed to go through the mapping process.
  
- `  mappings:` this section defined the mappings, it is a set of objects which are identified by the mapping name, in the example above that would be myMutation and muationConfigTwo
+ `      errorOnMissingMapping:` if the deployment requests a mapping that does not exist and this is true then throw an error and block it, if false and we can;t locate a mapping then let it continue unchanged. Defaults to true
+ 
+ `    substitutions:` This section controls the substitution engine, See the substitution configuration below for details of how to specifi substitutions
+ 
+ `      doSubstitutions:` If true and if mappings are operational then the substitution engine will look for substitutions in the mappings specified (see below) of if there isn't a substitution in the mappings for a JSON string field in the incoming deployment. 
+ 
+ `      substitutionStart:` it present a string indicating the start of a substitution placeholder, defaults to `...` if not set. You have to be carefull here to ensure that your chosen sequence won't; cause problems with earlier stages of kubernetes processing, for example using {} or [] will generally break the yaml to JSON conversion process done with in kubectl
+ 
+ `      substitutionEnd:` it present a string indicating the end of a substitution placeholder, defaults to `...` if not set Note that this can be the same character sequence as the substitutionStart of desired as the engine looks for the the end sequence after the start.
+
+### The mapping configuration
+
+For ease of optional file `mappings/mappings.yaml` is looked for by the configuration engine and is loaded if present. The reason for having separate files is that it will let you easily use Kubernetes configuration mechanisms (the various things like PVC's, config maps or secrets) to change the mapping structure options without having to modify the core configuration.
+
+The `mappings.yaml` file defines how the mappings will be used. It has the following structure
+
+```yaml
+# the mutator looks for the label specified in the mutate.input.labelName config 
+# setting. When presented with incomming deployments the mutator looks for that 
+# label and treats it's value as the mappings to apply to the pods that match. This 
+# is then run, so for example if mutate.input.labelName was set to mutatorMapping
+# and the incoming deployment had a label mutatorMapping with the value cpuIntensive
+# then this first set of mappings would be the ones applied to that deployment
+mappings:
+  cpuIntensive : 
+    spec:
+      template:
+        spec:
+          containers:
+          # is required, can be either key or index (case insensitive) 
+          # if key then you need a arrayKey, arrayKeyValue and arrayValue config entry and optionally arrayKeyMissingError and arrayKeyValueNoMatchAction
+          # if index then you need an arrayIndex with the value indicating the array oindex to use in the json and optionally arrayIndexMissingError
+          # Note that if you are adding items to the array using an index then arrayKey and arrayKeyValue are also required.
+          - arrayElementConfigType: "key"
+            arrayKey: "name"
+            # this is optional, if the key can't be found then you have the option to error and reject the request, if false then this is just ignored
+            arrayKeyMissingError: false 
+            arrayKeyValue: "nginx"
+            # this is optional, if there is no item in the JSON from Kubernetes in the list which has a key matching the keyValue then you have the 
+            # choice to ignore this config item totally (default), add a new item to the list (at the end) or error which will reject the entire request.
+            # If yuou chose to add then the code will automatically add an entry to the JSON generated from arrayValue which will have a name of the 
+            # arrayKey value and a value of the arrayKeyValue
+            # Note that if arrayKeyMissingError is false then this no match action will kick in if there are no objects that have a field with the arrayKey. This 
+            # means that if you make a mistake in the name in arrayKey then the action here is what will happen which may not be what you expect
+            arrayKeyValueNoMatchAction: "add" 
+            # indicates what array element in the incomming JSON to use as the incomming source, cannot be less than zero              
+            arrayIndex: 1
+            # what to do if the index is out of bounds of the incomming JSON array see the optins for arrayKeyValueNoMatchAction
+            # Note that unlike location array items using a key / key value if you specify add for an indexed item then you will need to include any 
+            # key / key value in the arrayValue json.
+            arrayIndexMissingError: "add"
+            # the config tree to compare against an existing json or (if add is selected and the existing isn't found) to add.
+            # note that if chosing add and a search on the key you will then the key  : keyValue will be added to this automatically, but not if using index
+            # Of course this also MUST confirm to the expected input formats as it's passed on to kubernetes, so for example specifying 256 for memory 
+            # will actuall mean 256 bytes as that's how kubernrtes interprets it, in reality for that case you'd probabaly want 256Mi meaning 25 Mega bytes
+            arrayValue:
+              resources:
+                requests:
+                  cpu: "250m"
+                  memory: "4Gi"
+                limits:
+                  cpu: "500m"
+                  memory: "8Gi"
+          # is required, can be either key or index (case insensitive) 
+          # if key then you need a arrayKey, arrayKeyValue and arrayValue config entry and optionally arrayKeyMissingError and arrayKeyValueNoMatchAction
+          # if index then you need an arrayIndex with the value indicating the array oindex to use in the json and optionally arrayIndexMissingError
+          # Note that if you are adding items to the array using an index then arrayKey and arrayKeyValue are also required.
+          - arrayElementConfigType: "index"
+            arrayIndex: 1
+            # what to do if the index is out of bounds of the incomming JSON array see the optins for arrayKeyValueNoMatchAction
+            # Note that unlike location array items using a key / key value if you specify add for an indexed item then you will need to include any 
+            # key / key value in the arrayValue json.
+            arrayIndexMissingError: "add"
+            # the config tree to compare against an existing json or (if add is selected and the existing isn't found) to add.
+            # note that if chosing add and a search on the key you will then the key  : keyValue will be added to this automatically, but not if using index
+            # Of course this also MUST confirm to the expected input formats as it's passed on to kubernetes, so for example specifying 256 for memory 
+            # will actuall mean 256 bytes as that's how kubernrtes interprets it, in reality for that case you'd probabaly want 256Mi meaning 25 Mega bytes
+            arrayValue:
+              # the substitution engine should kick in and update the placeholders here
+              image: "{{imageRegistry.localOCIR}}/{{imageRegistry.namespace}}ngnix:latest"
+          # the end of the containers array processing, this will just force a node selector for the pod
+          nodeSelector:
+            type: "cpu-large"
+  memoryIntensive : 
+    spec:
+      strategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxSurge: 1
+          maxUnavailable: 0 
+      template:
+        spec:
+          nodeSelector:
+            type: "memory-large"
+```
+
+The structure is as follows :
+
+ `  mappings:` this section defined the mappings, it is a set of objects which are identified by the mapping name, in the example above that would be `cpuIntensive` and `memoryIntensive`
  
  Within each mapping the structure should match that of the deployment. Any item that exists in the mapping but not in the deployment will be added to the deployment as a JSON object. If the deployment has an object for the mapping then all of the items within that entry will be checked recursively. If both the deployment and the mappings have a leaf object then any value in the mapping will replace that in the deployment.
  
@@ -203,6 +294,76 @@ Where you know **for certain** that the deployment array will always be in the o
 If you do not know for certain the index of the modification array in the deployment array then you can search based on a key. This let's you specify a key name to look for and value that indicates a match, then the processing will continue on the first element that matches. The `arrayKey` item will specify the name of the key to look for and `arrayKeyValue` the value to match against, both `arrayKey` and `arrayKeyValue` must be strings. As an example if searching for a container called `nginx` you might have `arrayKey` set to `name` and `arrayKeyValue` set to `nginx`. The code will then look for the first item in the list with  `name:nginx`. If the key can't be found than if `arrayKeyMissingError` is `true` the deployment will be rejected, if it is `false` then that entry in the deployment will be skipped and the code will check the next one (this allows control in cases where the specified key is not always be present the the object sin the deployment array).
 
 If there is no entry in the array with a matching key / key value then the `arrayKeyValueNoMatchAction` is looked at, if this is `error` then the entire deployment will be rejected, if it's `ignore` then this array element in the mapping will be ignored, if it's `add` then a new array entry will be added to the deployment based on the contents of the `arrayValue` key to avoid duplication if adding an item where there is a missing key : keyValue field then the code will automatically add an entry to the resulting object who's key it the contents of `arrayKey` and value is the string `arrayKeyValue`.
+
+### The substitution configuration
+
+Due to the limitations of the Helidon configuration system currently you can only specify placeholders in Strings (there being no mechanism to identify it a confoiguration value of "1234" should be treated as a string "1234 or an integer 1234
+
+The code will accept substitutions as part of the config tree anywhere you can feed them in. Note that in the case of a placeholder being in the incoming deployment AND a replacement being specified in the mapping then the mapping will take priority and any placeholders in the mapping will be substituted
+
+For example a mapping may have a arrayValue that includes
+
+`image: "...imageRegistry.localOCIR.../...imageRegistry.namespace.../ngnix:latest"`
+
+The substitutions will be applied before the image entry is applied to the container. Note that multiple placeholders can be substituted if desired.
+
+Alternatively the incoming deployment might have an image specification for a container 
+
+`                                "image": "...imageRegistry.localOCIR.../ngnix:latest"`
+
+In which case the substitutions will be applied to that (assuming that there is no mapping that overrides this)
+
+
+For ease of optional file `substitutions/substitutions.yaml` is looked for by the configuration engine and is loaded if present. The reason for having separate files is that it will let you easily use Kubernetes configuration mechanisms (the various things like PVC's, config maps or secrets) to change the substitution options without having to modify the core configuration.
+
+The substitution configuration is as follows
+
+```yaml
+# Control of substitutions ins via the mutate.input.substitutions.doSubstitutions property, if this is true
+# then substitutions will be looked for, it defaults to false (to preserve previous behavior)
+#
+# Substitutions are applied to any JSON that is added / replaced through mappings. There 
+# can be multiple placeholders in an input string 
+#
+# If there is no mapping but a substitution is found in the original JSON input then
+# it will be substituted (maepings will override anything in the input JSON)
+#
+# In the input text a substitution placeholder will start with the value in mutate.input.substitutions.substitutionStart
+# if it's not provided it will default to {{ (this is used in the examples below)
+#
+# In the input text a substitution placeholder will end with the value in mutate.input.substitutions.substitutionEnd
+# if it's not provided it will default to }} (this is used in the examples below)
+#
+# If there is no substitution found for a placeholder then an error is generated and the deployment will not proceed.
+#
+substitutions:
+  # This is a set of name / value pairs for potential substitutions, ONLY string values will be accepted
+  # if a substitution is needed then the EXACT name is looked for, this is case sensitive.
+  # so for example looking at this then if the substitution found a name of {{testValue} then
+  # it would be replaced with "1"
+  testValue: 1
+  # If a matching name is found then the value is applied
+  # names can be grouped together for convenience of management HOWEVER
+  # in that case the name used in the substitution must include all elements of the name separated .
+  # so basically JSON object notation.
+  # so for example looking at this then if the substitution found a name of ...imageRegistry.localOCIR... then
+  # it would be replaced with "fra.ocir.io"
+  imageRegistry:
+    localOCIR: "fra.ocir.io"
+ ```
+ 
+ ### Testing the engine
+ 
+ You can run the mutation engine as a "normal" java program provided you have setup the appropriate certificates as desceribed above.
+ 
+ Once running access it using the URL https://localhost:8080
+ 
+ A test deployment is provided which when run against the sample. In the home directory of the project enter
+ 
+ ```bash
+ <copy>curl -ivk -X POST --header "Content-Type: application/json" --data @test/sample-data.json https://localhost:8080/mutate</copy>
+ ```
+ 
  
 ## Disclaimer
 

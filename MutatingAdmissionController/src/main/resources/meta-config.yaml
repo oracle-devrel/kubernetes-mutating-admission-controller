@@ -37,7 +37,15 @@ sources:
     - type: "system-properties"
     - type: "file"
       properties:
-          path: "config/mappingconfig.yaml"
+          path: "configsecure/servertls.yaml"
+          optional: false
+    - type: "file"
+      properties:
+          path: "config/mutationconfig.yaml"
+          optional: false
+    - type: "file"
+      properties:
+          path: "mappings/mappings.yaml"
           optional: true
           change-watcher:
             type: "file"
@@ -46,8 +54,13 @@ sources:
               delay-millis: 5000
     - type: "file"
       properties:
-          path: "configsecure/servertls.yaml"
+          path: "substitutions/substitutions.yaml"
           optional: true
+          change-watcher:
+            type: "file"
+            properties:
+              initial-delay-millis: 10000
+              delay-millis: 5000
     - type: "classpath"
       properties:
           resource: "application.yaml"

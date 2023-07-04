@@ -1,4 +1,3 @@
-#!/bin/bash
 # Copyright (c) 2023 Oracle and/or its affiliates.
 # 
 # The Universal Permissive License (UPL), Version 1.0
@@ -33,9 +32,26 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-DOCKER_CMD=$HOME/.rd/bin/docker 
-IMAGE_NAME=deploymentmac
-source ./repoConfig.sh
-$DOCKER_CMD build  --tag "$IMAGE_NAME":"$VERSION" --tag "$IMAGE_NAME":latest --tag "$REPO"/"$IMAGE_NAME":"$VERSION" --tag "$REPO"/"$IMAGE_NAME":latest --file Dockerfile .
-$DOCKER_CMD push "$REPO"/"$IMAGE_NAME":latest
-$DOCKER_CMD push "$REPO"/"$IMAGE_NAME":"$VERSION"
+mutationEngine:
+  # a comman separated list of namespces to review when accepting inputs. If the object namespace is not on this list then 
+  # nothing will be modified
+  targetNamespaces: "mactest"
+  input:
+    mappings:
+      # do we run the mappings processs ?
+      doMappings: "true"
+      # name of the metadata label from the input that will contain the name of the mappings
+      labelName: "mutatorMapping"
+      # is a mapping required to be present ?
+      requireMapping: "false"
+      # do we error if we can't find a mapping ?
+      errorOnMissingMapping: "true"
+    # These control the substitutions engine
+    substitutions:
+      # do we look for substitutions in the incoming JSON or the replacement settings ?
+      # defaults to false (Only applied to string values)
+      doSubstitutions: "true"
+      # indicates tha start of a substitution placeholder defaults to ...
+      substitutionStart: "..."
+      # indicates tha end of a substitution placeholder defaults to ...
+      substitutionEnd: "..."
